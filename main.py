@@ -41,6 +41,9 @@ from keras.utils.data_utils import get_file
 from keras.engine.topology import get_source_inputs
 from keras import backend as K
 
+from rmac.get_regions import rmac_regions, get_size_vgg_feat_map
+from rmac.rmac import rmac
+
 
 def bind_model(model):
     def save(dir_name):
@@ -77,8 +80,23 @@ def bind_model(model):
 
         print('inference start')
 
+        # Load RMAC model
+        Wmap, Hmap = get_size_vgg_feat_map(224, 224)
+        regions = rmac_regions(Wmap, Hmap, 3)
+        print('Loading RMAC model...')
+        #vgg16_model = VGG16(utils.DATA_DIR + utils.WEIGHTS_FILE, input_shape)
+
+        model = rmac((x.shape[1], x.shape[2], x.shape[3]), len(regions),model)
+
+        # Compute RMAC vector
+        #print('Extracting RMAC from image...')
+        #RMAC = model.predict([x, np.expand_dims(regions, axis=0)])
+        #print('RMAC size: %s' % RMAC.shape[1])
+        #print('Done!')
+
         # inference
-        query_vecs = get_feature_layer([query_img, 0])[0]
+        query_vecs = model.predict([query_img, np.expand_dims(regions, axis=0)])
+        #get_feature_layer([query_img, 0])[0]
 
         # caching db output, db inference
         db_output = './db_infer.pkl'
@@ -86,13 +104,14 @@ def bind_model(model):
             with open(db_output, 'rb') as f:
                 reference_vecs = pickle.load(f)
         else:
-            reference_vecs = get_feature_layer([reference_img, 0])[0]
+            reference_vecs = model.predict([reference_img, np.expand_dims(regions, axis=0)])
+            #get_feature_layer([reference_img, 0])[0]
             with open(db_output, 'wb') as f:
                 pickle.dump(reference_vecs, f)
 
         # l2 normalization
-        query_vecs = l2_normalize(query_vecs)
-        reference_vecs = l2_normalize(reference_vecs)
+        #query_vecs = l2_normalize(query_vecs)
+        #reference_vecs = l2_normalize(reference_vecs)
 
         # Calculate cosine similarity
         sim_matrix = np.dot(query_vecs, reference_vecs.T)
