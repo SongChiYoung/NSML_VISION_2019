@@ -73,7 +73,7 @@ def bind_model(model):
         reference_img = reference_img.astype('float32')
         reference_img /= 255
 
-        get_feature_layer = K.function([model.layers[0].input] + [K.learning_phase()], [model.layers[-2].output])
+        #get_feature_layer = K.function([model.layers[0].input] + [K.learning_phase()], [model.layers[-2].output])
 
         print('inference start')
 
@@ -497,11 +497,20 @@ def InceptionResNetV2(include_top=True,
     x = conv2d_bn(x, 1536, 1, name='Conv2d_7b_1x1')
 
     if include_top:
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
+
+        # Classification block
+        x = Flatten(name='flatten')(x)
+        x = Dense(4096, activation='relu', name='fc1')(x)
+        x = Dense(4096, activation='relu', name='fc2')(x)
+        x = Dense(1000, activation='softmax', name='predictions')(x)
+        """
         # Classification block
         x = GlobalAveragePooling2D(name='AvgPool')(x)
         x = Dropout(1.0 - dropout_keep_prob, name='Dropout')(x)
         x = Dense(classes, name='Logits')(x)
         x = Activation('softmax', name='Predictions')(x)
+        """
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D(name='AvgPool')(x)
