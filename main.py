@@ -92,12 +92,13 @@ def bind_model(model):
         #print('Extracting RMAC from image...')
         #RMAC = model.predict([x, np.expand_dims(regions, axis=0)])
         #print('RMAC size: %s' % RMAC.shape[1])
-        #print('Done!')
-
+        print('Done!')
+        print('predict query...')
         # inference
         query_vecs = get_feature_layer.predict([query_img, np.expand_dims(regions, axis=0)])
         #get_feature_layer([query_img, 0])[0]
 
+        print('predict reference...')
         # caching db output, db inference
         db_output = './db_infer.pkl'
         if os.path.exists(db_output):
@@ -113,9 +114,11 @@ def bind_model(model):
         #query_vecs = l2_normalize(query_vecs)
         #reference_vecs = l2_normalize(reference_vecs)
 
+        print('sim_matrix...')
         # Calculate cosine similarity
         sim_matrix = np.dot(query_vecs, reference_vecs.T)
 
+        print('ranks...')
         retrieval_results = {}
 
         for (i, query) in enumerate(queries):
@@ -514,6 +517,7 @@ def InceptionResNetV2(include_top=True,
 
     # Final convolution block
     x = conv2d_bn(x, 1536, 1, name='Conv2d_7b_1x1')
+    x = conv2d_bn(x, 512, 1, name='Conv2d_to512_1x1')
 
     if include_top:
         x = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
@@ -659,8 +663,8 @@ if __name__ == '__main__':
         print(len(labels), 'train samples')
 
         """ Callback """
-        monitor = 'acc'
-        reduce_lr = ReduceLROnPlateau(monitor=monitor, patience=3)
+        monitor = 'loss'
+        reduce_lr = ReduceLROnPlateau(monitor=monitor, patience=3,min_lr=0.00000001)
 
         """ Training loop """
         for epoch in range(nb_epoch):
@@ -676,3 +680,4 @@ if __name__ == '__main__':
             nsml.report(summary=True, step=epoch, epoch=epoch, epoch_total=nb_epoch, loss=train_loss, acc=train_acc)
             if(epoch % 10 == 0):
                 nsml.save(epoch)
+        nsml.save(epoch)
