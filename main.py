@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import numpy as np
 
 from rmac.get_regions import rmac_regions, get_size_vgg_feat_map
 from rmac.rmac import rmac
@@ -13,7 +14,6 @@ import argparse
 import pickle
 
 import nsml
-import numpy as np
 
 from nsml import DATASET_PATH
 import keras
@@ -86,7 +86,7 @@ def bind_model(model):
         print('Loading RMAC model...')
         #vgg16_model = VGG16(utils.DATA_DIR + utils.WEIGHTS_FILE, input_shape)
 
-        get_feature_layer = rmac((x.shape[1], x.shape[2], x.shape[3]), len(regions),model)
+        get_feature_layer = rmac((224, 224, 3), len(regions),model)
 
         # Compute RMAC vector
         #print('Extracting RMAC from image...')

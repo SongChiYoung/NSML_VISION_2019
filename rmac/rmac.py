@@ -10,7 +10,7 @@ from rmac.RoiPooling import RoiPooling
 from rmac.get_regions import rmac_regions, get_size_vgg_feat_map
 import scipy.io
 import numpy as np
-import rmac.utils
+import rmac.utils as utils
 
 
 def addition(x):
@@ -41,6 +41,7 @@ def rmac(input_shape, num_rois, model_in):
     x = Lambda(lambda x: K.l2_normalize(x, axis=2), name='norm1')(x)
 
     # PCA
+	
     x = TimeDistributed(Dense(512, name='pca',
                               kernel_initializer='identity',
                               bias_initializer='zeros'))(x)
