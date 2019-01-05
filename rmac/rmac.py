@@ -6,10 +6,9 @@ from keras.models import Model
 from keras.preprocessing import image
 import keras.backend as K
 
-from vgg16 import VGG16
 from RoiPooling import RoiPooling
 from get_regions import rmac_regions, get_size_vgg_feat_map
-
+from vgg16 import VGG16    
 import scipy.io
 import numpy as np
 import utils
@@ -32,7 +31,7 @@ def rmac(input_shape, num_rois, model):
 
     # Load model
     #model = model
-	
+    
     # Regions as input
     in_roi = Input(shape=(num_rois, 4), name='input_roi')
 
@@ -57,7 +56,7 @@ def rmac(input_shape, num_rois, model):
     rmac_norm = Lambda(lambda x: K.l2_normalize(x, axis=1), name='rmac_norm')(rmac)
 
     # Define model
-    model = Model([vgg16_model.input, in_roi], rmac_norm)
+    model = Model([model.input, in_roi], rmac_norm)
 
     # Load PCA weights
     mat = scipy.io.loadmat(utils.DATA_DIR + utils.PCA_FILE)
@@ -71,8 +70,8 @@ def rmac(input_shape, num_rois, model):
 if __name__ == "__main__":
 
     # Load sample image
-    file = utils.DATA_DIR + 'sample.jpg'
-    img = image.load_img(file)
+    #file = utils.DATA_DIR + 'sample.jpg'
+    #img = image.load_img(file)
 
     # Resize
     scale = utils.IMG_SIZE / max(img.size)
@@ -89,7 +88,9 @@ if __name__ == "__main__":
     Wmap, Hmap = get_size_vgg_feat_map(x.shape[3], x.shape[2])
     regions = rmac_regions(Wmap, Hmap, 3)
     print('Loading RMAC model...')
-    model = rmac((x.shape[1], x.shape[2], x.shape[3]), len(regions))
+    vgg16_model = VGG16(utils.DATA_DIR + utils.WEIGHTS_FILE, input_shape)
+
+    model = rmac((x.shape[1], x.shape[2], x.shape[3]), len(regions),vgg16_model)
 
     # Compute RMAC vector
     print('Extracting RMAC from image...')
