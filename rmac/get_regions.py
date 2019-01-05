@@ -1,7 +1,5 @@
 from __future__ import division
 
-import numpy as np
-
 
 def get_size_vgg_feat_map(input_W, input_H):
     output_W = input_W

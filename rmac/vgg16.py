@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-
 from keras.models import Model
 from keras.layers import Flatten, Dense, Input
 from keras.layers import Convolution2D, MaxPooling2D
-from keras import backend as K
 
-import utils
+from keras import backend as K
+import rmac.utils
 
 K.set_image_dim_ordering('th')
 

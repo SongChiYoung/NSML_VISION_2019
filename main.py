@@ -3,6 +3,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+from rmac.get_regions import rmac_regions, get_size_vgg_feat_map
+from rmac.rmac import rmac
+
 import os
 
 import cv2
@@ -41,8 +44,6 @@ from keras.utils.data_utils import get_file
 from keras.engine.topology import get_source_inputs
 from keras import backend as K
 
-from rmac.get_regions import rmac_regions, get_size_vgg_feat_map
-from rmac.rmac import rmac
 
 
 def bind_model(model):
@@ -56,7 +57,6 @@ def bind_model(model):
         print('model loaded!')
 
     def infer(queries, db):
-
         # Query 개수: 195
         # Reference(DB) 개수: 1,127
         # Total (query + reference): 1,322
@@ -86,7 +86,7 @@ def bind_model(model):
         print('Loading RMAC model...')
         #vgg16_model = VGG16(utils.DATA_DIR + utils.WEIGHTS_FILE, input_shape)
 
-        model = rmac((x.shape[1], x.shape[2], x.shape[3]), len(regions),model)
+        get_feature_layer = rmac((x.shape[1], x.shape[2], x.shape[3]), len(regions),model)
 
         # Compute RMAC vector
         #print('Extracting RMAC from image...')
@@ -95,7 +95,7 @@ def bind_model(model):
         #print('Done!')
 
         # inference
-        query_vecs = model.predict([query_img, np.expand_dims(regions, axis=0)])
+        query_vecs = get_feature_layer.predict([query_img, np.expand_dims(regions, axis=0)])
         #get_feature_layer([query_img, 0])[0]
 
         # caching db output, db inference
