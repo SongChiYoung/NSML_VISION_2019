@@ -81,10 +81,16 @@ def bind_model(model):
         print('inference start')
 
         # Load RMAC model
-        Wmap, Hmap = get_size_vgg_feat_map(224, 224)
+        Wmap, Hmap = 8.0,8.0
+        #Wmap, Hmap = get_size_vgg_feat_map(224, 224)
+		
+        print(Wmap, Hmap)
+
         regions = rmac_regions(Wmap, Hmap, 3)
         print('Loading RMAC model...')
         #vgg16_model = VGG16(utils.DATA_DIR + utils.WEIGHTS_FILE, input_shape)
+
+        print(len(regions), regions.shape)
 
         get_feature_layer = rmac((224, 224, 3), len(regions),model)
 
@@ -93,10 +99,20 @@ def bind_model(model):
         #RMAC = model.predict([x, np.expand_dims(regions, axis=0)])
         #print('RMAC size: %s' % RMAC.shape[1])
         print('Done!')
+        print(query_img.shape)
+        print(reference_img.shape)
+        print(regions.shape)
         print('predict query...')
         # inference
-        query_vecs = get_feature_layer.predict([query_img, np.expand_dims(regions, axis=0)])
+        
+        tmp = []
+        for i in range(query_img.shape[0]):
+            tmp.append(regions)
+        region_query = np.stack(tmp)
+
+        query_vecs = get_feature_layer.predict([query_img, region_query])
         #get_feature_layer([query_img, 0])[0]
+        print(query_vecs.shape)
 
         print('predict reference...')
         # caching db output, db inference
@@ -105,10 +121,15 @@ def bind_model(model):
             with open(db_output, 'rb') as f:
                 reference_vecs = pickle.load(f)
         else:
-            reference_vecs = model.predict([reference_img, np.expand_dims(regions, axis=0)])
+            tmp = []
+            for i in range(reference_img.shape[0]):
+                tmp.append(regions)
+            region_reference = np.stack(tmp)
+            reference_vecs = model.predict([reference_img, region_reference])
             #get_feature_layer([reference_img, 0])[0]
             with open(db_output, 'wb') as f:
                 pickle.dump(reference_vecs, f)
+        print(reference_vecs.shape)
 
         # l2 normalization
         #query_vecs = l2_normalize(query_vecs)
@@ -665,7 +686,8 @@ if __name__ == '__main__':
         """ Callback """
         monitor = 'loss'
         reduce_lr = ReduceLROnPlateau(monitor=monitor, patience=3,min_lr=0.00000001)
-
+        #for fast debug
+        nsml.save(1)
         """ Training loop """
         for epoch in range(nb_epoch):
             res = model.fit(x_train, y_train,
@@ -680,4 +702,5 @@ if __name__ == '__main__':
             nsml.report(summary=True, step=epoch, epoch=epoch, epoch_total=nb_epoch, loss=train_loss, acc=train_acc)
             if(epoch % 10 == 0):
                 nsml.save(epoch)
-        nsml.save(epoch)
+        if(not(epoch % 10 == 0)):
+            nsml.save(epoch)

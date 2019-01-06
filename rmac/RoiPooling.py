@@ -89,6 +89,8 @@ class RoiPooling(Layer):
                             new_shape = [input_shape[0], input_shape[1],
                                          y2 - y1, x2 - x1]
                             x_crop = img[:, :, y1:y2, x1:x2]
+                            #print("th crop shape new, real :",new_shape, x_crop.shape)
+                            K.print_tensor(new_shape, message='new_shape = ')
                             xm = K.reshape(x_crop, new_shape)
                             pooled_val = K.max(xm, axis=(2, 3))
                             outputs.append(pooled_val)
@@ -109,12 +111,16 @@ class RoiPooling(Layer):
 
                             new_shape = [input_shape[0], y2 - y1,
                                          x2 - x1, input_shape[3]]
-                            x_crop = img[:, y1:y2, x1:x2, :]
+                            x_crop = img[:, y1:y2, x1:x2, :]							
+                            #print("tf crop shape new, real :",new_shape, x_crop.shape)
+                            K.print_tensor(new_shape, message='new_shape = ')
                             xm = K.reshape(x_crop, new_shape)
                             pooled_val = K.max(xm, axis=(1, 2))
                             outputs.append(pooled_val)
 
         final_output = K.concatenate(outputs, axis=0)
-        final_output = K.reshape(final_output, (1, self.num_rois, self.nb_channels * self.num_outputs_per_channel))
+        #print(self.nb_channels * self.num_outputs_per_channel)
+        final_output = K.reshape(final_output, (1, self.num_rois, -1))
+        #final_output = K.reshape(final_output, (1, self.num_rois, self.nb_channels * self.num_outputs_per_channel))
 
         return final_output
