@@ -694,6 +694,7 @@ if __name__ == '__main__':
     # hyperparameters
     args.add_argument('--epochs', type=int, default=5)
     args.add_argument('--batch_size', type=int, default=128)
+    args.add_argument('--lr', type=int, default=0.0001)
 
     # DONOTCHANGE: They are reserved for nsml
     args.add_argument('--mode', type=str, default='train', help='submit일때 해당값이 test로 설정됩니다.')
@@ -704,6 +705,7 @@ if __name__ == '__main__':
     # training parameters
     nb_epoch = config.epochs
     batch_size = config.batch_size
+    lr =  config.lr
     num_classes = 1000
     input_shape = (224, 224, 3)  # input image shape
 
@@ -747,7 +749,7 @@ if __name__ == '__main__':
         bTrainmode = True
 
         """ Initiate adam optimizer """
-        opt = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-8)
+        opt = keras.optimizers.Adam(lr=lr, beta_1=0.9, beta_2=0.999, epsilon=1e-8)
         model.compile(loss='categorical_crossentropy',
                       optimizer=opt,
                       metrics=['accuracy'])
@@ -779,9 +781,9 @@ if __name__ == '__main__':
 
         """ Callback """
         monitor = 'loss'
-        reduce_lr = ReduceLROnPlateau(monitor=monitor, patience=3,min_lr=0.00000001)
+        reduce_lr = ReduceLROnPlateau(monitor=monitor, patience=3,min_lr=0, min_delta=0.001)
         #for fast debug
-        nsml.save(1)
+        #nsml.save(1)
         """ Training loop """
         for epoch in range(nb_epoch):
             res = model.fit(x_train, y_train,
