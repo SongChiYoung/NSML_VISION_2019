@@ -56,7 +56,9 @@ def bind_model(model):
         model.load_weights(file_path)
         print('model loaded!')
 
+
     def infer(queries, db):
+
         # Query 개수: 195
         # Reference(DB) 개수: 1,127
         # Total (query + reference): 1,322
@@ -75,10 +77,70 @@ def bind_model(model):
         query_img /= 255
         reference_img = reference_img.astype('float32')
         reference_img /= 255
-
-        #get_feature_layer = K.function([model.layers[0].input] + [K.learning_phase()], [model.layers[-2].output])
+        print(model.layers[-4].name)
+        get_feature_layer = K.function([model.layers[0].input] + [K.learning_phase()], [model.layers[-4].output])
 
         print('inference start')
+
+        # inference
+        query_vecs = get_feature_layer([query_img, 0])[0]
+        print(query_vecs)
+        # caching db output, db inference
+        db_output = './db_infer.pkl'
+        if os.path.exists(db_output):
+            with open(db_output, 'rb') as f:
+                reference_vecs = pickle.load(f)
+        else:
+            reference_vecs = get_feature_layer([reference_img, 0])[0]
+            print(reference_vecs)
+            with open(db_output, 'wb') as f:
+                pickle.dump(reference_vecs, f)
+
+        # l2 normalization
+        query_vecs = l2_normalize(query_vecs)
+        reference_vecs = l2_normalize(reference_vecs)
+
+        # Calculate cosine similarity
+        sim_matrix = np.dot(query_vecs, reference_vecs.T)
+
+        retrieval_results = {}
+
+        for (i, query) in enumerate(queries):
+            query = query.split('/')[-1].split('.')[0]
+            sim_list = zip(references, sim_matrix[i].tolist())
+            sorted_sim_list = sorted(sim_list, key=lambda x: x[1], reverse=True)
+
+            ranked_list = [k.split('/')[-1].split('.')[0] for (k, v) in sorted_sim_list]  # ranked list
+
+            retrieval_results[query] = ranked_list
+        print('done')
+
+        return list(zip(range(len(retrieval_results)), retrieval_results.items()))
+
+
+    def infer2(queries, db):
+        # Query 개수: 195
+        # Reference(DB) 개수: 1,127
+        # Total (query + reference): 1,322
+
+        queries, query_img, references, reference_img = preprocess(queries, db)
+
+        print('test data load queries {} query_img {} references {} reference_img {}'.
+              format(len(queries), len(query_img), len(references), len(reference_img)))
+
+        queries = np.asarray(queries)
+        query_img = np.asarray(query_img)
+        references = np.asarray(references)
+        reference_img = np.asarray(reference_img)
+
+        query_img = query_img.astype('float32')
+        query_img /= 255
+        reference_img = reference_img.astype('float32')
+        reference_img /= 255
+        
+        print('inference start')
+
+        #get_feature_layer = K.function([model.layers[0].input] + [K.learning_phase()], [model.layers[-2].output])
 
         # Load RMAC model
         Wmap, Hmap = 8.0,8.0
@@ -215,6 +277,14 @@ def preprocess_input(x):
     x *= 2.
     return x
 
+def gem_pool(x):
+    x = K.clip(x, eps, np.inf)
+    x = K.pow(x, p)
+    
+    x = GlobalAveragePooling2D(name='AvgPool')(x)
+
+    out = K.pow(x, 1./p)
+    return out
 
 def conv2d_bn(x,
               filters,
@@ -541,6 +611,12 @@ def InceptionResNetV2(include_top=True,
     x = conv2d_bn(x, 512, 1, name='Conv2d_to512_1x1')
 
     if include_top:
+        
+        p = 3
+        eps = 1e-6
+        #options for gem
+        """
+        #MAX pool block
         x = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
 
         # Classification block
@@ -550,11 +626,24 @@ def InceptionResNetV2(include_top=True,
         x = Dense(1000, activation='softmax', name='predictions')(x)
         """
         # Classification block
+        """
+        def gem(x, p=3, eps=1e-6):
+            return F.avg_pool2d(x.clamp(min=eps).pow(p), (x.size(-2), x.size(-1))).pow(1./p)
+            # return F.lp_pool2d(F.threshold(x, eps, eps), p, (x.size(-2), x.size(-1))) # alternative
+        """
+        
+        x = Lambda(lambda x : K.pow(K.clip(x, eps, np.inf),p))(x)
+        #x = K.clip(x, eps, np.inf)
+        #x = K.pow(x, p)
+        
         x = GlobalAveragePooling2D(name='AvgPool')(x)
+        
+        x = Lambda(lambda x : K.pow(x, 1./p), name="gem")(x)
+        
         x = Dropout(1.0 - dropout_keep_prob, name='Dropout')(x)
         x = Dense(classes, name='Logits')(x)
         x = Activation('softmax', name='Predictions')(x)
-        """
+        
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D(name='AvgPool')(x)
@@ -642,7 +731,12 @@ if __name__ == '__main__':
     model.add(Dense(num_classes))
     model.add(Activation('softmax'))"""
     model.summary()
-
+    
+    for (i, lay) in enumerate(model.layers):
+        print(i, lay.name)
+    pass
+    print(model.layers[-4].name)
+    
     bind_model(model)
 
     if config.pause:
