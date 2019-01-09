@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 import numpy as np
+import random
 
 from rmac.get_regions import rmac_regions, get_size_vgg_feat_map
 from rmac.rmac import rmac
@@ -278,6 +279,9 @@ def preprocess_input(x):
     return x
 
 def gem_pool(x):
+    p = 3
+    eps = 1e-6
+
     x = K.clip(x, eps, np.inf)
     x = K.pow(x, p)
     
@@ -608,7 +612,7 @@ def InceptionResNetV2(include_top=True,
 
     # Final convolution block
     x = conv2d_bn(x, 1536, 1, name='Conv2d_7b_1x1')
-    x = conv2d_bn(x, 512, 1, name='Conv2d_to512_1x1')
+    #x = conv2d_bn(x, 512, 1, name='Conv2d_to512_1x1')
 
     if include_top:
         
@@ -694,7 +698,8 @@ if __name__ == '__main__':
     # hyperparameters
     args.add_argument('--epochs', type=int, default=5)
     args.add_argument('--batch_size', type=int, default=128)
-    args.add_argument('--lr', type=int, default=0.0001)
+    args.add_argument('--lr', type=float, default=0.0001)
+    args.add_argument('--triplet', type=int, default=0)
 
     # DONOTCHANGE: They are reserved for nsml
     args.add_argument('--mode', type=str, default='train', help='submit일때 해당값이 test로 설정됩니다.')
@@ -711,27 +716,6 @@ if __name__ == '__main__':
 
     """ Model """
     model=InceptionResNetV2(weights=None)
-    """model = Sequential()
-    model.add(Conv2D(32, (3, 3), padding='same', input_shape=input_shape))
-    model.add(Activation('relu'))
-    model.add(Conv2D(32, (3, 3)))
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-
-    model.add(Conv2D(64, (3, 3), padding='same'))
-    model.add(Activation('relu'))
-    model.add(Conv2D(64, (3, 3)))
-    model.add(Activation('relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dropout(0.25))
-
-    model.add(Flatten())
-    model.add(Dense(512))
-    model.add(Activation('relu'))
-    model.add(Dropout(0.5))
-    model.add(Dense(num_classes))
-    model.add(Activation('softmax'))"""
     model.summary()
     
     for (i, lay) in enumerate(model.layers):
@@ -782,8 +766,62 @@ if __name__ == '__main__':
         """ Callback """
         monitor = 'loss'
         reduce_lr = ReduceLROnPlateau(monitor=monitor, patience=3,min_lr=0, min_delta=0.001)
-        #for fast debug
-        #nsml.save(1)
+
+        is_triplet = config.triplet
+        if(is_triplet != 0):
+            retrieval_results = {}
+            #get_feature_layer = K.function([model.layers[0].input] + [K.learning_phase()], [model.layers[-4].output])
+            triplet = Model([model.input], [model.layers[-4].output])
+            for epoch in range(nb_epoch):
+                if(epoch % 64 == 0):
+                    #select 5000 image random
+                    tmp = set(range(len(x_train)))
+                    selected = random.sample(tmp, 5000)
+                    unselect = list(tmp - set(selected))
+                    #random select the 5000 and unselected.
+                    selected_x = [x_train[i] for i in selected]
+                    selected_y = [y_train[i] for i in selected]
+
+                    unselect_x = [x_train[i] for i in unselect]
+                    unselect_y = [y_train[i] for i in unselect]
+                    #super eaaaaasy index to code
+
+                    #calculate of all of feature
+                    sel_feature = l2_normalize(triplet.predict(selected_x))
+                    unsel_feature = l2_normalize(triplet.predict(unselect_x))
+                    #they need to [0] ?
+
+                    #calc loss with not-selected imgages
+                    for i,feature in enumerate(sel_feature):
+                        sim_matrix = np.dot(feature, unsel_feature.T)
+                        #ToDo: sim_matrix = [if negative 5-x else x for x in sim_matrix]
+                        #select top 25 loss set each image
+                    #ToDo build loss
+
+                #ToDo: model.fit with builded loss
+                """
+                res = model.fit(x_train, y_train,
+                            batch_size=batch_size,
+                            initial_epoch=epoch,
+                            epochs=epoch + 1,
+                            callbacks=[reduce_lr],
+                            verbose=1,
+                            shuffle=True)
+                            
+                print(res.history)
+                train_loss, train_acc = res.history['loss'][0], res.history['acc'][0]
+                nsml.report(summary=True, step=epoch, epoch=epoch, epoch_total=nb_epoch, loss=train_loss, acc=train_acc)
+                """
+                #ToDo: model.fit with builded loss
+                
+                if(epoch % 10 == 0):
+                    nsml.save(epoch)
+                pass
+            if(not(epoch % 10 == 0)):
+                nsml.save(epoch)
+            exit(1)
+            pass
+        
         """ Training loop """
         for epoch in range(nb_epoch):
             res = model.fit(x_train, y_train,
