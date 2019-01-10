@@ -770,6 +770,7 @@ if __name__ == '__main__':
         is_triplet = config.triplet
         if(is_triplet != 0):
             retrieval_results = {}
+            selects = []
             #get_feature_layer = K.function([model.layers[0].input] + [K.learning_phase()], [model.layers[-4].output])
             triplet = Model([model.input], [model.layers[-4].output])
             for epoch in range(nb_epoch):
@@ -792,13 +793,25 @@ if __name__ == '__main__':
                     #they need to [0] ?
 
                     #calc loss with not-selected imgages
+                    res = []
                     for i,feature in enumerate(sel_feature):
+                        res.append([])
                         sim_matrix = np.dot(feature, unsel_feature.T)
-                        #ToDo: sim_matrix = [if negative 5-x else x for x in sim_matrix]
+                        #sim_matrix = [if negative 5-x else x for x in sim_matrix]
+                        #res [[[loss, idx]....[loss,idx]] ..5000.. [[]] ]
+                        for j, f in enumerate(sim_matrix):
+                            if(selected_y[i] == unselect_y[j]):
+                                res[i].append([f,j])
+                            else:
+                                res[i].append([max(0,5-f),j])
                         #select top 25 loss set each image
-                    #ToDo build loss
-
+                        res[i].sort()
+                    res = np.array(res)
+                    selects = res[:,:25,1].reshape(5000,25)
+                    #build loss
+                print(selects)
                 #ToDo: model.fit with builded loss
+                
                 """
                 res = model.fit(x_train, y_train,
                             batch_size=batch_size,
