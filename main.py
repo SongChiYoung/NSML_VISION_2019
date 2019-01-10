@@ -771,7 +771,6 @@ if __name__ == '__main__':
         if(is_triplet != 0):
             retrieval_results = {}
             selects = []
-            #get_feature_layer = K.function([model.layers[0].input] + [K.learning_phase()], [model.layers[-4].output])
             triplet = Model([model.input], [model.layers[-4].output])
             for epoch in range(nb_epoch):
                 if(epoch % 64 == 0):
@@ -780,19 +779,25 @@ if __name__ == '__main__':
                     selected = random.sample(tmp, 5000)
                     unselect = list(tmp - set(selected))
                     #random select the 5000 and unselected.
-                    selected_x = [x_train[i] for i in selected]
-                    selected_y = [y_train[i] for i in selected]
+                    selected_x = np.asarray([x_train[i] for i in selected])
+                    selected_y = np.asarray([y_train[i] for i in selected])
 
-                    unselect_x = [x_train[i] for i in unselect]
-                    unselect_y = [y_train[i] for i in unselect]
+                    unselect_x = np.asarray([x_train[i] for i in unselect])
+                    unselect_y = np.asarray([y_train[i] for i in unselect])
                     #super eaaaaasy index to code
 
                     #calculate of all of feature
-                    sel_feature = l2_normalize(triplet.predict(selected_x))
-                    unsel_feature = l2_normalize(triplet.predict(unselect_x))
-                    #they need to [0] ?
+                    #reference_vecs = get_feature_layer([unselect_x, 0])[0]
+                    tmp = triplet.predict(selected_x,batch_size=batch_size,verbose=1)
+                    print(tmp)
+                    sel_feature = l2_normalize(tmp)
 
-                    #calc loss with not-selected imgages
+                    tmp = triplet.predict(unselect_x,batch_size=batch_size,verbose=1)
+                    print(tmp)
+                    unsel_feature = l2_normalize(tmp)
+                    #they need to [0]  #calc loss with not-selected imgages
+
+                    print("start calc triplet losses for select")
                     res = []
                     for i,feature in enumerate(sel_feature):
                         res.append([])
@@ -800,7 +805,7 @@ if __name__ == '__main__':
                         #sim_matrix = [if negative 5-x else x for x in sim_matrix]
                         #res [[[loss, idx]....[loss,idx]] ..5000.. [[]] ]
                         for j, f in enumerate(sim_matrix):
-                            if(selected_y[i] == unselect_y[j]):
+                            if((selected_y[i] == unselect_y[j]).all()):
                                 res[i].append([f,j])
                             else:
                                 res[i].append([max(0,5-f),j])
