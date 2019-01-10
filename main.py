@@ -797,6 +797,7 @@ if __name__ == '__main__':
                     unsel_feature = l2_normalize(tmp)
                     #they need to [0]  #calc loss with not-selected imgages
 
+                    #ToDo: need to More speed up with batch, or build Keras model
                     print("start calc triplet losses for select")
                     res = []
                     for i,feature in enumerate(sel_feature):
@@ -811,10 +812,11 @@ if __name__ == '__main__':
                                 res[i].append([max(0,5-f),j])
                         #select top 25 loss set each image
                         res[i].sort()
-                    res = np.array(res)
+                    res = np.asarray(res)
                     selects = res[:,:25,1].reshape(5000,25)
-                    #build loss
-                print(selects)
+                    print(selects)
+                #ToDo: build loss
+                
                 #ToDo: model.fit with builded loss
                 
                 """
