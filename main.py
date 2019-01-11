@@ -807,9 +807,9 @@ if __name__ == '__main__':
                         #res [[[loss, idx]....[loss,idx]] ..5000.. [[]] ]
                         for j, f in enumerate(sim_matrix):
                             if((selected_y[i] == unselect_y[j]).all()):
-                                res[i].append([f,j])
+                                res[i].append([f**2,j])
                             else:
-                                res[i].append([max(0,5-f),j])
+                                res[i].append([max(0,5-f)**2,j])
                         #select top 25 loss set each image
                         res[i].sort()
                     res = np.asarray(res)
