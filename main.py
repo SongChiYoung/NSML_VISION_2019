@@ -49,13 +49,12 @@ import tensorflow as tf
 
 def svd_whiten(X):
 
-    U, s, Vt = tf.linalg.svd(X)#K.linalg.svd(X, full_matrices=False)
+    s, U, Vt = tf.linalg.svd(X, full_matrices=False)#K.linalg.svd(X, full_matrices=False)
 
     # U and Vt are the singular matrices, and s contains the singular values.
     # Since the rows of both U and Vt are orthonormal vectors, then U * Vt
     # will be white
     X_white = K.dot(U, Vt)
-
     return X_white
 
 def bind_model(model):
@@ -655,7 +654,9 @@ def InceptionResNetV2(include_top=True,
         
         x = Lambda(lambda x : K.pow(x, 1./p), name="gem")(x)
 		#ToDo: Fix svd whiten..
-        #x = Lambda(svd_whiten, name="SVD_Whiten")(x)
+        x = Lambda(svd_whiten, name="SVD_Whiten")(x)
+        		
+        #x = Flatten(name='flatten')(x)
 		
         x = Dropout(1.0 - dropout_keep_prob, name='Dropout')(x)
         x = Dense(classes, name='Logits')(x)
