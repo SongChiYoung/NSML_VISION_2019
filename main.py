@@ -55,6 +55,7 @@ def svd_whiten(X):
     # Since the rows of both U and Vt are orthonormal vectors, then U * Vt
     # will be white
     X_white = K.dot(U, Vt)
+    X_white = K.reshape(X_white, [-1, 1536])
     return X_white
 
 def bind_model(model):
