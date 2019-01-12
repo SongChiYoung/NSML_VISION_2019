@@ -44,7 +44,7 @@ from keras.layers import MaxPooling2D
 from keras.utils.data_utils import get_file
 from keras.engine.topology import get_source_inputs
 from keras import backend as K
-
+from keras.preprocessing.image import ImageDataGenerator
 
 
 def bind_model(model):
@@ -228,6 +228,32 @@ def l2_normalize(v):
     return v / norm
 
 
+def ZCA(x):
+    x_c = x - np.mean(x, 0)
+
+# compute the 2x2 covariance matrix
+# (remember that covariance matrix is symmetric)
+    sigma = np.cov(x, rowvar=False)
+# and extract eigenvalues and eigenvectors
+# using the algorithm for symmetric matrices
+    l,u = np.linalg.eigh(sigma)
+# NOTE that for symmetric matrices,
+# eigenvalues and singular values are the same.
+# u, l, _ = np.linalg.svd(sigma) should thus give equivalent results
+
+# rotate the (centered) data to decorrelate it
+    x_rot = np.dot(x_c, u)
+# check that the covariance is diagonal (indicating decorrelation)
+    np.allclose(np.cov(x_rot.T), np.diag(np.diag(np.cov(x_rot.T))))
+
+# scale the data by eigenvalues to get unit variance
+    x_white = x_rot / np.sqrt(l)
+# have the whitened data be closer to the original data
+    x_zca = np.dot(x_white, u.T)
+    return x
+
+
+
 # data preprocess
 def preprocess(queries, db):
     query_img = []
@@ -279,7 +305,7 @@ def preprocess_input(x):
     return x
 
 def gem_pool(x):
-    p = 3
+    p = 6
     eps = 1e-6
 
     x = K.clip(x, eps, np.inf)
@@ -616,7 +642,7 @@ def InceptionResNetV2(include_top=True,
 
     if include_top:
         
-        p = 3
+        p = 1
         eps = 1e-6
         #options for gem
         """
@@ -643,7 +669,11 @@ def InceptionResNetV2(include_top=True,
         x = GlobalAveragePooling2D(name='AvgPool')(x)
         
         x = Lambda(lambda x : K.pow(x, 1./p), name="gem")(x)
+
+        datagen = ImageDataGenerator(featurewise_center=True, featurewise_std_normalization=True, zca_whitening=True)
+        datagen.fit(x)
         
+                
         x = Dropout(1.0 - dropout_keep_prob, name='Dropout')(x)
         x = Dense(classes, name='Logits')(x)
         x = Activation('softmax', name='Predictions')(x)
@@ -807,9 +837,9 @@ if __name__ == '__main__':
                         #res [[[loss, idx]....[loss,idx]] ..5000.. [[]] ]
                         for j, f in enumerate(sim_matrix):
                             if((selected_y[i] == unselect_y[j]).all()):
-                                res[i].append([f**2,j])
+                                res[i].append([f,j])
                             else:
-                                res[i].append([max(0,5-f)**2,j])
+                                res[i].append([max(0,5-f),j])
                         #select top 25 loss set each image
                         res[i].sort()
                     res = np.asarray(res)
