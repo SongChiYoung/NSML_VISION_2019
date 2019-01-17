@@ -5,9 +5,6 @@ from __future__ import print_function
 import numpy as np
 import random
 
-from rmac.get_regions import rmac_regions, get_size_vgg_feat_map
-from rmac.rmac import rmac
-
 import os
 
 import cv2
@@ -812,7 +809,13 @@ if __name__ == '__main__':
 
                     #ToDo: need to More speed up with batch, or build Keras model
                     print("start calc triplet losses for select")
+                    
+                    n_gap = 5
+
                     res = []
+                    p_res = []
+                    n_res = []
+                    tmp_res = []
                     for i,feature in enumerate(sel_feature):
                         res.append([])
                         sim_matrix = np.dot(feature, unsel_feature.T)
@@ -821,10 +824,20 @@ if __name__ == '__main__':
                         for j, f in enumerate(sim_matrix):
                             if((selected_y[i] == unselect_y[j]).all()):
                                 res[i].append([f**2,j])
+                                p_res[i].append([f**2,j])
+                                tmp_res[i].append([f**2,j])
                             else:
-                                res[i].append([max(0,5-f)**2,j])
+                                res[i].append([max(0,n_gap-f)**2,j])
+                                n_res[i].append([max(0,n_gap-f)**2,j])
+                                tmp_res[i].append([f**2,j])
                         #select top 25 loss set each image
                         res[i].sort()
+                        p_res[i].sort()
+                        n_res[i].sort()
+                        tmp_res[i].sort()
+                    
+                    print(np.asarray(tmp)[:,0:5,:])
+                    
                     res = np.asarray(res)
                     selects = res[:,:25,1].reshape(5000,25)
                     print(selects)
