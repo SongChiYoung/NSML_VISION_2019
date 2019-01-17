@@ -1,5 +1,25 @@
 # 네이버 AI 해커톤 2018_Ai Vision
 
+최종 1차 순위 60/100
+
+우리의 노력...
+
+1. Inception ResNet v2 모델을 사용
+<br><tr> 대부분 논문에서는 ResNet을 쓰지만, CNN layers 가 이미지의 특징 벡터를 뽑아내는 역할 이라면, 분류기에서 더 성능이 좋~다고 주장하~는 Inception ResNet v2 가 가장 좋지 않을까 하고 생각했다.
+1. Image retrieval 을 위한 논문들을 읽고 적용해봄
+<br><tr> * MAC 방식 논문 : [From Generic to Specific Deep Representations for Visual Recognition](https://www.cv-foundation.org/openaccess/content_cvpr_workshops_2015/W03/html/Azizpour_From_Generic_to_2015_CVPR_paper.html)
+<br><tr> * R-MAC 방식 논문 : [Particular object retrieval with integral max-pooling of CNN activations](https://arxiv.org/abs/1511.05879)
+<br><tr>하지만, RMAC방식은 기간내에 구현하지 못했다. 
+<br><tr> * GEM 방식 논문 : 원래논문과는 다소 다를 수 있지만, 아래 논문을 참고하여 구현하였다.
+<br><tr> * GEM 방식에 Triplet loss 등 Fine-tuning을 더한 논문 [Fine-tuning CNN Image Retrieval with No Human Annotation](https://arxiv.org/abs/1711.02512)
+<br><tr>하지만 Triplet loss는 기간내에 구현하지 못했다.
+1. 다양한 실험 조건을 통해 우리의 lr 매직 넘버를 찾아냄 : lr = 0.001
+
+
+----
+
+# 네이버 AI 해커톤 2018_Ai Vision
+
 "올해 봄 첫걸음을 내디딘 AI해커톤을 기억하시나요?"
 
 약 한달간의 여정동안 여러분들의 <br>
